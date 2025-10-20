@@ -1,0 +1,111 @@
+{
+  "version": "2.0.3",
+  "animations": [
+    {
+      "name": "Appear",
+      "cookedAnimationOptions": [
+        {
+          "elementsSelector": ":scope",
+          "animationStart": 0,
+          "duration": 333.333,
+          "properties": {
+            "opacity": [
+              { "percent": 0, "value": " 0", "easing": "" },
+              {
+                "percent": 100,
+                "value": " 1",
+                "easing": "cubic-bezier(0.333, 0, 0.667, 1)"
+              }
+            ]
+          },
+          "keepsFinalState": false
+        }
+      ],
+      "cookedEvents": []
+    },
+    {
+      "name": "Disappear",
+      "cookedAnimationOptions": [
+        {
+          "elementsSelector": ":scope",
+          "animationStart": 0,
+          "duration": 333.333,
+          "properties": {
+            "opacity": [
+              { "percent": 0, "value": " 1", "easing": "" },
+              {
+                "percent": 100,
+                "value": " 0",
+                "easing": "cubic-bezier(0.333, 0, 0.667, 1)"
+              }
+            ]
+          },
+          "keepsFinalState": true
+        }
+      ],
+      "cookedEvents": []
+    }
+  ],
+  "exposedAttributes": [],
+  "exposedChildren": [
+    { "name": "Trigger", "selector": "#bnHxRsAa" },
+    { "name": "ToolBar", "selector": "#ieHjLkax" },
+    { "name": "ButtonTemplate", "selector": "#CGgbMEsT" },
+    { "name": "ButtonContainerTemplate", "selector": "#IkvJCsos" }
+  ],
+  "exposedValues": {},
+  "visualStates": [
+    {
+      "name": "State_Off",
+      "elements": [
+        {
+          "name": "ToolBar",
+          "attributes": [
+            { "name": "name", "value": "ToolBar" },
+            { "name": "active", "value": "false" }
+          ],
+          "changes": { "display": "none" },
+          "selector": "#ieHjLkax"
+        }
+      ]
+    },
+    {
+      "name": "State_On",
+      "elements": [
+        {
+          "name": "ToolBar",
+          "attributes": [
+            { "name": "name", "value": "ToolBar" },
+            { "name": "active", "value": "true" }
+          ],
+          "changes": { "display": "var(--display)" },
+          "selector": "#ieHjLkax"
+        }
+      ]
+    },
+    {
+      "name": "State_Hidden",
+      "elements": [
+        {
+          "name": "ToolBar",
+          "attributes": [
+            { "name": "name", "value": "ToolBar" },
+            { "name": "active", "value": "false" }
+          ],
+          "changes": { "display": "none" },
+          "selector": "#ieHjLkax"
+        },
+        {
+          "name": "Trigger",
+          "attributes": [
+            { "name": "name", "value": "Trigger" },
+            { "name": "active", "value": "false" }
+          ],
+          "changes": { "display": "none" },
+          "selector": "#JTrIAaTN"
+        }
+      ]
+    }
+  ],
+  "placeholderTemplates": {}
+}
