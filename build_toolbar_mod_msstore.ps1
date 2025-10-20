@@ -65,6 +65,9 @@ $sf    = [double]$ScalePercent / 100.0
 $reOpt = [System.Text.RegularExpressions.RegexOptions]::Singleline
 function ScaleNum([double]$n,[double]$f){ [math]::Round($n*$f,3).ToString('0.###') }
 
+# ⚠️ NEW: UTF-8 without BOM for MSFS HTML
+$Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+
 # ---------- 3) Scale all height: calc(var(--unscaledScreenHeight) * Npx / 1080) ----------
 $reHeight = New-Object System.Text.RegularExpressions.Regex 'height:\s*calc\(\s*var\(--unscaledScreenHeight\)\s*\*\s*([0-9]+(?:\.[0-9]+)?)px\s*/\s*1080\s*\)', $reOpt
 $fullHtml = $reHeight.Replace($fullHtml, {
@@ -74,45 +77,25 @@ $fullHtml = $reHeight.Replace($fullHtml, {
   "height: calc(var(--unscaledScreenHeight) * ${new}px / 1080)"
 })
 
-# ---------- 4) name="Toolbar_Trigger" → ensure a standalone style="opacity: 0" attribute ----------
-$rxTriggerOpen = New-Object System.Text.RegularExpressions.Regex '(?is)<ui-resource-element\b[^>]*name="Toolbar_Trigger"[^>]*>'
-$fullHtml = $rxTriggerOpen.Replace($fullHtml, {
+# ---------- 4) name="Toolbar_Trigger" → ensure style="opacity: 0" ----------
+$reTriggerOpen = New-Object System.Text.RegularExpressions.Regex '(<ui-resource-element\b[^>]*name="Toolbar_Trigger"[^>]*)(>)', $reOpt
+$reStyleAttr   = New-Object System.Text.RegularExpressions.Regex '\sstyle="[^"]*"', $reOpt
+$fullHtml = $reTriggerOpen.Replace($fullHtml, {
   param($m)
-  $tag = $m.Value
-
-  # If we already have a standalone style="opacity: 0", keep it
-  if ($tag -notmatch 'style="\s*opacity\s*:\s*0\s*;?\s*"') {
-    # Insert style="opacity: 0" immediately after the name="Toolbar_Trigger" attribute
-    $tag = [System.Text.RegularExpressions.Regex]::Replace(
-      $tag,
-      'name="Toolbar_Trigger"',
-      'name="Toolbar_Trigger" style="opacity: 0"',
-      1
-    )
-  }
-
-  # In any other style="..." attribute on this tag (the long multiline one),
-  # strip any opacity: ... declaration so the small attribute is the only source of opacity.
-  $tag = [System.Text.RegularExpressions.Regex]::Replace(
-    $tag,
-    '(?is)(style=")([^"]*)(")',
-    {
+  $start = $m.Groups[1].Value
+  if ($reStyleAttr.IsMatch($start)) {
+    $start = $reStyleAttr.Replace($start, {
       param($n)
-      $before = $n.Groups[1].Value
-      $val    = $n.Groups[2].Value
-      $after  = $n.Groups[3].Value
-
-      # If this style is exactly "opacity: 0", leave it intact.
-      if ($val -match '^\s*opacity\s*:\s*0\s*;?\s*$') { return $n.Value }
-
-      # Otherwise remove any opacity declarations inside the long style block.
-      $val2 = [System.Text.RegularExpressions.Regex]::Replace($val, 'opacity\s*:\s*[^;"]+;?', '')
-      return $before + $val2 + $after
-    }
-  )
-
-  return $tag
-}, 1)  # only the first Toolbar_Trigger tag
+      $val = $n.Value
+      if ($val -match 'opacity:\s*[^;"]+') { $val = [regex]::Replace($val, 'opacity:\s*[^;"]+', 'opacity: 0') }
+      else { $val = $val.TrimEnd('"') + '; opacity: 0"' }
+      $val
+    })
+    return $start + $m.Groups[2].Value
+  } else {
+    return $start + ' style="opacity: 0"' + $m.Groups[2].Value
+  }
+}, 1)
 
 # 5) Scale the "* 50px / 1080" inside the ToolBar top: calc(...) — robust, no $1/$2
 $idx = $fullHtml.IndexOf('name="ToolBar"')
@@ -155,7 +138,7 @@ $fullHtml = $rxIconOpen.Replace($fullHtml, {
 
 # ---------- 7) Write HTML + JSON into target\<PkgName>\cookedcomps ----------
 $outHtml = Join-Path $cookedOut ($panelHtml.Name)   # {GUID}.html
-[System.IO.File]::WriteAllText($outHtml, $fullHtml, [System.Text.Encoding]::UTF8)
+[System.IO.File]::WriteAllText($outHtml, $fullHtml, $Utf8NoBom)   # <-- no BOM
 
 if (Test-Path $panelJsonPath) {
   Copy-Item -Force $panelJsonPath (Join-Path $cookedOut ([IO.Path]::GetFileName($panelJsonPath)))

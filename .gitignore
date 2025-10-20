@@ -1,0 +1,2 @@
+# Ignore everything in the target folder (at repo root)
+/target/
