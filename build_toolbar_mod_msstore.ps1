@@ -74,25 +74,45 @@ $fullHtml = $reHeight.Replace($fullHtml, {
   "height: calc(var(--unscaledScreenHeight) * ${new}px / 1080)"
 })
 
-# ---------- 4) name="Toolbar_Trigger" → ensure style="opacity: 0" ----------
-$reTriggerOpen = New-Object System.Text.RegularExpressions.Regex '(<ui-resource-element\b[^>]*name="Toolbar_Trigger"[^>]*)(>)', $reOpt
-$reStyleAttr   = New-Object System.Text.RegularExpressions.Regex '\sstyle="[^"]*"', $reOpt
-$fullHtml = $reTriggerOpen.Replace($fullHtml, {
+# ---------- 4) name="Toolbar_Trigger" → ensure a standalone style="opacity: 0" attribute ----------
+$rxTriggerOpen = New-Object System.Text.RegularExpressions.Regex '(?is)<ui-resource-element\b[^>]*name="Toolbar_Trigger"[^>]*>'
+$fullHtml = $rxTriggerOpen.Replace($fullHtml, {
   param($m)
-  $start = $m.Groups[1].Value
-  if ($reStyleAttr.IsMatch($start)) {
-    $start = $reStyleAttr.Replace($start, {
-      param($n)
-      $val = $n.Value
-      if ($val -match 'opacity:\s*[^;"]+') { $val = [regex]::Replace($val, 'opacity:\s*[^;"]+', 'opacity: 0') }
-      else { $val = $val.TrimEnd('"') + '; opacity: 0"' }
-      $val
-    })
-    return $start + $m.Groups[2].Value
-  } else {
-    return $start + ' style="opacity: 0"' + $m.Groups[2].Value
+  $tag = $m.Value
+
+  # If we already have a standalone style="opacity: 0", keep it
+  if ($tag -notmatch 'style="\s*opacity\s*:\s*0\s*;?\s*"') {
+    # Insert style="opacity: 0" immediately after the name="Toolbar_Trigger" attribute
+    $tag = [System.Text.RegularExpressions.Regex]::Replace(
+      $tag,
+      'name="Toolbar_Trigger"',
+      'name="Toolbar_Trigger" style="opacity: 0"',
+      1
+    )
   }
-}, 1)
+
+  # In any other style="..." attribute on this tag (the long multiline one),
+  # strip any opacity: ... declaration so the small attribute is the only source of opacity.
+  $tag = [System.Text.RegularExpressions.Regex]::Replace(
+    $tag,
+    '(?is)(style=")([^"]*)(")',
+    {
+      param($n)
+      $before = $n.Groups[1].Value
+      $val    = $n.Groups[2].Value
+      $after  = $n.Groups[3].Value
+
+      # If this style is exactly "opacity: 0", leave it intact.
+      if ($val -match '^\s*opacity\s*:\s*0\s*;?\s*$') { return $n.Value }
+
+      # Otherwise remove any opacity declarations inside the long style block.
+      $val2 = [System.Text.RegularExpressions.Regex]::Replace($val, 'opacity\s*:\s*[^;"]+;?', '')
+      return $before + $val2 + $after
+    }
+  )
+
+  return $tag
+}, 1)  # only the first Toolbar_Trigger tag
 
 # 5) Scale the "* 50px / 1080" inside the ToolBar top: calc(...) — robust, no $1/$2
 $idx = $fullHtml.IndexOf('name="ToolBar"')
